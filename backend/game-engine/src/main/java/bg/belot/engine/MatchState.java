@@ -5,9 +5,9 @@ import static bg.belot.engine.BelotEngine.*;
 public final class MatchState {
  public enum Phase { BIDDING, PLAYING, DEAL_DONE, FINISHED }
  public final List<List<Card>> hands=new ArrayList<>();public final List<List<Play>> tricks=new ArrayList<>();public final List<Play> current=new ArrayList<>();public final int[] score={0,0};
- public int dealer=0,turn=1,contractTeam=-1,passCount=0,contra=1,pending=0,dealNumber=0,capotLock=0;public int contraTeam=-1;public long version=0;public Phase phase;public Contract contract;public Contract highest;public final List<String> history=new ArrayList<>();public final List<Declaration> declarations=new ArrayList<>();public final Set<Integer> declarationDecisions=new HashSet<>();public final Set<Integer> beloteClaims=new HashSet<>();private List<Card> stock;private final List<List<Declaration>> declarationOptions=new ArrayList<>();
+ public int dealer=0,turn=1,contractTeam=-1,passCount=0,contra=1,pending=0,dealNumber=0,capotLock=0;public int contraTeam=-1;public long version=0;public Phase phase;public Contract contract;public Contract highest;public final List<String> history=new ArrayList<>();public final List<Declaration> declarations=new ArrayList<>();public final Set<Integer> declarationDecisions=new HashSet<>();public final Set<Integer> beloteClaims=new HashSet<>();public final Map<Integer,Set<Suit>> belotePending=new HashMap<>();private List<Card> stock;private final List<List<Declaration>> declarationOptions=new ArrayList<>();
  public MatchState(){newDeal();}
- public synchronized void newDeal(){stock=shuffle();hands.clear();for(int i=0;i<4;i++)hands.add(new ArrayList<>());int at=0;for(int packet:List.of(3,2)){for(int offset=1;offset<=4;offset++){int seat=(dealer+offset)%4;for(int j=0;j<packet;j++)hands.get(seat).add(stock.get(at++));}}stock=new ArrayList<>(stock.subList(at,32));tricks.clear();current.clear();declarations.clear();declarationDecisions.clear();beloteClaims.clear();declarationOptions.clear();highest=null;contract=null;contractTeam=-1;passCount=0;contra=1;contraTeam=-1;turn=(dealer+1)%4;phase=Phase.BIDDING;dealNumber++;version++;}
+ public synchronized void newDeal(){stock=shuffle();hands.clear();for(int i=0;i<4;i++)hands.add(new ArrayList<>());int at=0;for(int packet:List.of(3,2)){for(int offset=1;offset<=4;offset++){int seat=(dealer+offset)%4;for(int j=0;j<packet;j++)hands.get(seat).add(stock.get(at++));}}stock=new ArrayList<>(stock.subList(at,32));tricks.clear();current.clear();declarations.clear();declarationDecisions.clear();beloteClaims.clear();belotePending.clear();declarationOptions.clear();highest=null;contract=null;contractTeam=-1;passCount=0;contra=1;contraTeam=-1;turn=(dealer+1)%4;phase=Phase.BIDDING;dealNumber++;version++;}
  public synchronized void bid(int seat,String action){require(Phase.BIDDING,seat);if(action.equals("PASS")){passCount++;if(highest==null&&passCount==4){dealer=(dealer+1)%4;newDeal();return;}if(highest!=null&&passCount==3){finalizeBid();return;}}else if(action.equals("CONTRA")){if(highest==null||contractTeam==team(seat)||contra!=1)throw new IllegalArgumentException("Contra not allowed");contra=2;contraTeam=team(seat);passCount=0;}else if(action.equals("RECONTRA")){if(highest==null||contractTeam!=team(seat)||contra!=2||contraTeam==team(seat))throw new IllegalArgumentException("Recontra not allowed");contra=4;passCount=0;}else{Contract c=Contract.valueOf(action);if(highest!=null&&priority(c)<=priority(highest))throw new IllegalArgumentException("Bid must be higher");if(contra!=1)throw new IllegalArgumentException("Contract locked by contra");highest=c;contractTeam=team(seat);passCount=0;}turn=(turn+1)%4;version++;}
  private void finalizeBid(){contract=highest;int k=0;for(int offset=1;offset<=4;offset++){int seat=(dealer+offset)%4;for(int j=0;j<3;j++)hands.get(seat).add(stock.get(k++));}stock=List.of();for(int i=0;i<4;i++)declarationOptions.add(detect(List.copyOf(hands.get(i)),i,contract));phase=Phase.PLAYING;turn=(dealer+1)%4;version++;}
  public synchronized List<Declaration> availableDeclarations(int seat){
@@ -30,7 +30,7 @@ public final class MatchState {
   declarationDecisions.add(seat);version++;
  }
  public synchronized List<Card> legalFor(int seat){return phase==Phase.PLAYING&&seat==turn?legal(hands.get(seat),current,contract,seat):List.of();}
- public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
+ public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(belotePending.containsKey(seat)&& (card.rank()==Rank.KING||card.rank()==Rank.QUEEN) && belotePending.get(seat).contains(card.suit())){boolean bothPlayed=originalHandFor(seat).stream().filter(c->c.suit()==card.suit()&&(c.rank()==Rank.KING||c.rank()==Rank.QUEEN)).count()==2;if(bothPlayed)beloteClaims.add(seat);}if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
  private int[] resolveDeclarationPoints(){
   int[] result={0,0};
   // Four-of-a-kind and sequences compete in separate categories.
@@ -49,10 +49,12 @@ public final class MatchState {
   return result;
  }
  public synchronized void claimBelote(int seat){
-  if(phase!=Phase.PLAYING||seat!=turn)throw new IllegalArgumentException("Belote can be announced only on your turn");
-  if(beloteClaims.contains(seat))throw new IllegalArgumentException("Already announced belote");
-  if(!hasBelote(hands.get(seat),contract))throw new IllegalArgumentException("No belote or first card already played");
-  beloteClaims.add(seat);version++;
+  if(phase!=Phase.PLAYING||seat!=turn)throw new IllegalArgumentException("Belote only on your turn");
+  if(beloteClaims.contains(seat)||belotePending.containsKey(seat))throw new IllegalArgumentException("Already announced");
+  if(!hasBelote(hands.get(seat),contract))throw new IllegalArgumentException("No belote");
+  Set<Suit> eligible=new HashSet<>();
+  for(Suit suit:Suit.values())if((contract==Contract.ALL_TRUMP||contract.ordinal()==suit.ordinal())&&hands.get(seat).contains(new Card(suit,Rank.KING))&&hands.get(seat).contains(new Card(suit,Rank.QUEEN)))eligible.add(suit);
+  belotePending.put(seat,eligible);version++;
  }
  private List<Card> originalHandFor(int seat){
   List<Card> cards=new ArrayList<>(hands.get(seat));
