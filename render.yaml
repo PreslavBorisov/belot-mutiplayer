@@ -8,3 +8,10 @@ services:
     envVars:
       - key: PORT
         value: 8080
+    # Configure a durable PostgreSQL instance (e.g. Neon) in Render environment.
+      - key: JDBC_DATABASE_URL
+        sync: false
+      - key: JDBC_DATABASE_USERNAME
+        sync: false
+      - key: JDBC_DATABASE_PASSWORD
+        sync: false
