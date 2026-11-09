@@ -12,7 +12,36 @@ public final class MatchState {
  private void finalizeBid(){contract=highest;int k=0;for(int offset=1;offset<=4;offset++){int seat=(dealer+offset)%4;for(int j=0;j<3;j++)hands.get(seat).add(stock.get(k++));}stock=List.of();phase=Phase.PLAYING;turn=(dealer+1)%4;version++;}
  public synchronized List<Card> legalFor(int seat){return phase==Phase.PLAYING&&seat==turn?legal(hands.get(seat),current,contract,seat):List.of();}
  public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
- private void finishDeal(){int[] raw=trickPoints(tricks,contract);int winner=raw[0]==raw[1]?-1:raw[0]>raw[1]?0:1;int total=raw[0]+raw[1];if(winner<0){pending+=total*contra/10;score[1-contractTeam]+=raw[1-contractTeam]*contra/10;}else{int[] added=new int[2];if(contra>1||winner!=contractTeam){added[winner]=(total*contra+5)/10;}else{added[0]=(raw[0]+5)/10;added[1]=(raw[1]+5)/10;}added[winner]+=pending;pending=0;score[0]+=added[0];score[1]+=added[1];}boolean capot=tricks.stream().allMatch(t->team(t.get(winningIndex(t,contract)).seat())==team(tricks.get(0).get(winningIndex(tricks.get(0),contract)).seat()));history.add("Deal "+dealNumber+" "+contract+" raw="+Arrays.toString(raw)+" score="+Arrays.toString(score)+" pending="+pending);if(capot)capotLock=1;else if(capotLock>0)capotLock=0;if(capotLock==0&&Math.max(score[0],score[1])>=151&&score[0]!=score[1])phase=Phase.FINISHED;else phase=Phase.DEAL_DONE;version++;}
+ private void finishDeal(){
+  int[] raw=trickPoints(tricks,contract);
+  int defenders=1-contractTeam;
+  int total=raw[0]+raw[1];
+  boolean contractMade=raw[contractTeam]>raw[defenders];
+  int[] added=new int[2];
+  // A failed contract awards the entire deal to the defenders.
+  // Equal trick points are held as pending; defenders receive their own points.
+  if(raw[contractTeam]==raw[defenders]){
+   pending+=(total*contra+5)/10;
+  }else if(!contractMade){
+   added[defenders]=(total*contra+5)/10;
+  }else if(contra>1){
+   added[contractTeam]=(total*contra+5)/10;
+  }else{
+   added[0]=(raw[0]+5)/10;
+   added[1]=(raw[1]+5)/10;
+  }
+  if(raw[contractTeam]!=raw[defenders]){
+   added[contractMade?contractTeam:defenders]+=pending;
+   pending=0;
+  }
+  score[0]+=added[0];score[1]+=added[1];
+  boolean capot=tricks.stream().allMatch(t->team(t.get(winningIndex(t,contract)).seat())==team(tricks.get(0).get(winningIndex(tricks.get(0),contract)).seat()));
+  history.add("Deal "+dealNumber+" "+contract+" raw="+Arrays.toString(raw)+" score="+Arrays.toString(score)+" pending="+pending+" made="+contractMade);
+  if(capot)capotLock=1;else if(capotLock>0)capotLock=0;
+  if(capotLock==0&&Math.max(score[0],score[1])>=151&&score[0]!=score[1])phase=Phase.FINISHED;
+  else phase=Phase.DEAL_DONE;
+  version++;
+ }
  public synchronized void nextDeal(){if(phase!=Phase.DEAL_DONE)throw new IllegalStateException("Not ready");dealer=(dealer+1)%4;newDeal();}
  private void require(Phase expected,int seat){if(phase!=expected||turn!=seat)throw new IllegalArgumentException("Wrong phase or turn");}
 }
