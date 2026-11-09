@@ -14,6 +14,12 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - name: Compile and run dependency-free rules regression tests
+        run: |
+          mkdir -p /tmp/belot-classes
+          javac -d /tmp/belot-classes backend/game-engine/src/main/java/bg/belot/engine/*.java backend/game-engine/src/test/java/bg/belot/engine/*.java
+          java -ea -cp /tmp/belot-classes bg.belot.engine.EngineSmoke
+          java -ea -cp /tmp/belot-classes bg.belot.engine.RulesRegression
       - name: Build backend and run tests
         working-directory: backend
         run: mvn -B clean verify
