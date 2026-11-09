@@ -15,7 +15,7 @@ public class RulesRegression {
   eq(List.of(c(Suit.CLUBS,Rank.EIGHT)),legal(hand,over,Contract.CLUBS,2),"must undertrump if unable to overtrump");
   eq(List.of(c(Suit.HEARTS,Rank.SEVEN)),legal(List.of(c(Suit.HEARTS,Rank.SEVEN),c(Suit.CLUBS,Rank.JACK)),trick,Contract.CLUBS,1),"must follow suit");
   List<Card> all=List.of(c(Suit.HEARTS,Rank.JACK),c(Suit.HEARTS,Rank.NINE));
-  eq(List.of(c(Suit.HEARTS,Rank.JACK)),legal(all,List.of(new Play(0,c(Suit.HEARTS,Rank.SEVEN))),Contract.ALL_TRUMP,1),"must raise all trump");
+  eq(List.of(c(Suit.HEARTS,Rank.JACK)),legal(all,List.of(new Play(0,c(Suit.HEARTS,Rank.NINE))),Contract.ALL_TRUMP,1),"must raise all trump");
   eq(20,points(c(Suit.CLUBS,Rank.JACK),Contract.CLUBS),"trump jack points");
   eq(2,points(c(Suit.CLUBS,Rank.JACK),Contract.NO_TRUMP),"non trump jack points");
   System.out.println("PASS: deterministic rules regression checks");
