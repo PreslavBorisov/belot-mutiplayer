@@ -14,7 +14,8 @@ public class BelotServer {
  private final Map<String,Room> rooms=new ConcurrentHashMap<>();
  static class Room {final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;}
  public record Join(String player,int seat){}
- public record Command(String token,String action,String card){}\n public record DeclareCommand(String token,List<Integer> selected){}
+ public record Command(String token,String action,String card){}
+ public record DeclareCommand(String token,List<Integer> selected){}
  public static void main(String[] args){SpringApplication.run(BelotServer.class,args);}
  @GetMapping("/health")public Map<String,String> health(){return Map.of("status","UP");}
  @PostMapping("/rooms")public Map<String,String> create(){String id=UUID.randomUUID().toString().substring(0,6).toUpperCase();rooms.put(id,new Room());return Map.of("code",id);}
@@ -48,7 +49,9 @@ public class BelotServer {
     else r.game.bid(seat,"PASS");
    }else if(r.game.phase==MatchState.Phase.PLAYING){
     List<Card> choices=r.game.legalFor(seat);
-    if(choices.isEmpty())break;\n    if(r.game.tricks.isEmpty()&&r.game.current.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());\n    r.game.play(seat,choices.get(0));
+    if(choices.isEmpty())break;
+    if(r.game.tricks.isEmpty()&&r.game.current.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());
+    r.game.play(seat,choices.get(0));
    }else break;
   }
  }
