@@ -14,7 +14,7 @@ public class BelotServer {
  private final Map<String,Room> rooms=new ConcurrentHashMap<>();
  private final RoomStore store;
  public BelotServer(RoomStore store){this.store=store;for(var entry:store.load().entrySet())rooms.put(entry.getKey(),(Room)entry.getValue());}
- static class Room implements java.io.Serializable {private static final long serialVersionUID=1L;final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;}
+ static class Room implements java.io.Serializable {private static final long serialVersionUID=1L;final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;transient long nextBotActionAt=0;}
  public record Join(String player,int seat){}
  public record Command(String token,String action,String card){}
  public record DeclareCommand(String token,List<Integer> selected){}
@@ -42,8 +42,8 @@ public class BelotServer {
   }
  }
  private void advanceBots(Room r){
-  int guard=0;
-  while(r.started&&guard++<150){
+  if(System.currentTimeMillis()<r.nextBotActionAt)return;
+  while(r.started){
    int seat=r.game.turn;
    if(seat<0||seat>=4||r.tokens[seat]!=null)break;
    if(r.game.phase==MatchState.Phase.BIDDING){
@@ -55,6 +55,8 @@ public class BelotServer {
     if(BelotEngine.hasBelote(r.game.hands.get(seat),r.game.contract)&&!r.game.beloteClaims.contains(seat)&&!r.game.belotePending.containsKey(seat))r.game.claimBelote(seat);
     r.game.play(seat,BelotBot.play(r.game,seat));
    }else break;
+   r.nextBotActionAt=System.currentTimeMillis()+1500;
+   break;
   }
  }
  @PostMapping("/rooms/{code}/start")public Map<String,Object> start(@PathVariable String code,@RequestBody Command c){
@@ -67,7 +69,7 @@ public class BelotServer {
   }
  }
  @GetMapping("/rooms/{code}")public Map<String,Object> snapshot(@PathVariable String code,@RequestParam String token){
-  Room r=room(code);synchronized(r){return view(r,authenticate(r,token));}
+  Room r=room(code);synchronized(r){int seat=authenticate(r,token);long version=r.game.version;advanceBots(r);if(version!=r.game.version)store.save(code,r);return view(r,seat);}
  }
  @PostMapping("/rooms/{code}/declare")public Map<String,Object> declare(@PathVariable String code,@RequestBody DeclareCommand c){
   Room r=room(code);synchronized(r){
@@ -116,6 +118,7 @@ public class BelotServer {
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());
   m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("canClaimBelote",g.phase==MatchState.Phase.PLAYING&&g.turn==seat&&!g.beloteClaims.contains(seat)&&!g.belotePending.containsKey(seat)&&BelotEngine.hasBelote(g.hands.get(seat),g.contract));m.put("trick",List.copyOf(g.current));
+  m.put("playedTricks",List.copyOf(g.tricks));m.put("announcedDeclarations",List.copyOf(g.declarations));m.put("beloteSeats",List.copyOf(g.belotePending.keySet()));
   m.put("tricksCompleted",g.tricks.size());m.put("history",List.copyOf(g.history));
   return m;
  }

@@ -7,15 +7,33 @@ import static bg.belot.engine.BelotEngine.*;
 public final class BelotBot {
  private BelotBot(){}
  public static String bid(MatchState g,int seat){
-  if(g.highest!=null)return "PASS";
+  if(g.contra!=1 || (g.highest!=null && g.contractTeam==team(seat)))return "PASS";
   List<Card> hand=g.hands.get(seat);
-  Contract best=Contract.CLUBS;int max=-1;
+  Contract best=null;double bestStrength=0;
   for(Contract c:Contract.values()){
-   int value=hand.stream().mapToInt(card->points(card,c)+(trump(card,c)?power(card,c)*2:0)).sum();
-   if(value>max){max=value;best=c;}
+   if(g.highest!=null && priority(c)<=priority(g.highest))continue;
+   double strength;
+   if(c==Contract.ALL_TRUMP){
+    long jacks=hand.stream().filter(x->x.rank()==Rank.JACK).count();
+    long nines=hand.stream().filter(x->x.rank()==Rank.NINE).count();
+    strength=jacks>=2 ? (jacks*2.5+nines*1.5)/7.0 : 0;
+   }else if(c==Contract.NO_TRUMP){
+    long aces=hand.stream().filter(x->x.rank()==Rank.ACE).count();
+    long tens=hand.stream().filter(x->x.rank()==Rank.TEN).count();
+    strength=aces>=2 ? (aces*3+tens)/8.0 : 0;
+   }else{
+    List<Card> trumps=hand.stream().filter(x->trump(x,c)).toList();
+    double control=trumps.stream().mapToDouble(x->switch(x.rank()){
+     case JACK->4;case NINE->3;case ACE->2;case TEN->1;default->0.5;
+    }).sum();
+    long sideAces=hand.stream().filter(x->!trump(x,c)&&x.rank()==Rank.ACE).count();
+    strength=trumps.size()>=3 ? (control+sideAces*1.5)/8.0 : 0;
+   }
+   if(strength>bestStrength){bestStrength=strength;best=c;}
   }
-  return max>=30?best.name():"PASS";
+  return best!=null&&bestStrength>=1 ? best.name():"PASS";
  }
+
  public static List<Integer> declarations(MatchState g,int seat){
   List<Declaration> choices=g.availableDeclarations(seat);
   List<Integer> selected=new ArrayList<>();
