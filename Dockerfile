@@ -8,9 +8,8 @@ RUN npm run build
 FROM maven:3.9-eclipse-temurin-21 AS backend
 WORKDIR /app
 COPY backend/ ./backend/
+COPY --from=frontend /app/frontend/dist/ /app/backend/game-server/src/main/resources/static/
 RUN cd backend && mvn -B -DskipTests package
-COPY --from=frontend /app/frontend/dist/ /app/backend/game-server/target/classes/static/
-RUN cd backend && jar uf game-server/target/game-server-0.1.0.jar -C game-server/target/classes static
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
