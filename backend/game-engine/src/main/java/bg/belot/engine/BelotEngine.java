@@ -8,9 +8,9 @@ public final class BelotEngine {
   public enum Suit { CLUBS, DIAMONDS, HEARTS, SPADES }
   public enum Rank { SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE }
   public enum Contract { CLUBS, DIAMONDS, HEARTS, SPADES, NO_TRUMP, ALL_TRUMP }
-  public record Card(Suit suit, Rank rank) { public String id(){return suit.name()+"_"+rank.name();} }
-  public record Play(int seat, Card card) {}
-  public record Declaration(int seat, String kind, int points, List<Card> cards) {}
+  public record Card(Suit suit, Rank rank) implements java.io.Serializable { public String id(){return suit.name()+"_"+rank.name();} }
+  public record Play(int seat, Card card) implements java.io.Serializable {}
+  public record Declaration(int seat, String kind, int points, List<Card> cards) implements java.io.Serializable {}
   public record DealScore(int[] raw, int[] rounded, int pending, boolean capot, int winnerTeam) {}
   private static final List<Rank> NORMAL = List.of(Rank.SEVEN,Rank.EIGHT,Rank.NINE,Rank.JACK,Rank.QUEEN,Rank.KING,Rank.TEN,Rank.ACE);
   private static final List<Rank> TRUMP = List.of(Rank.SEVEN,Rank.EIGHT,Rank.QUEEN,Rank.KING,Rank.TEN,Rank.ACE,Rank.NINE,Rank.JACK);
