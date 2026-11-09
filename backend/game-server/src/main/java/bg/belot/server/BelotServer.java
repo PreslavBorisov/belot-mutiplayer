@@ -12,13 +12,15 @@ import static bg.belot.engine.BelotEngine.*;
 @RequestMapping("/api")
 public class BelotServer {
  private final Map<String,Room> rooms=new ConcurrentHashMap<>();
- static class Room {final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;}
+ private final RoomStore store;
+ public BelotServer(RoomStore store){this.store=store;for(var entry:store.load().entrySet())rooms.put(entry.getKey(),(Room)entry.getValue());}
+ static class Room implements java.io.Serializable {private static final long serialVersionUID=1L;final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;}
  public record Join(String player,int seat){}
  public record Command(String token,String action,String card){}
  public record DeclareCommand(String token,List<Integer> selected){}
  public static void main(String[] args){SpringApplication.run(BelotServer.class,args);}
  @GetMapping("/health")public Map<String,String> health(){return Map.of("status","UP");}
- @PostMapping("/rooms")public Map<String,String> create(){String id=UUID.randomUUID().toString().substring(0,6).toUpperCase();rooms.put(id,new Room());return Map.of("code",id);}
+ @PostMapping("/rooms")public Map<String,String> create(){String id=UUID.randomUUID().toString().substring(0,6).toUpperCase();Room r=new Room();rooms.put(id,r);store.save(id,r);return Map.of("code",id);}
 
  @PostMapping("/rooms/{code}/join")public Map<String,Object> join(@PathVariable String code,@RequestBody Join j){
   Room r=room(code);synchronized(r){
@@ -28,7 +30,7 @@ public class BelotServer {
    if(r.seats[j.seat()]!=null)throw new IllegalArgumentException("Seat occupied");
    String token=UUID.randomUUID().toString()+UUID.randomUUID();
    r.seats[j.seat()]=j.player();r.tokens[j.seat()]=token;
-   Map<String,Object> result=view(r,j.seat());result.put("token",token);return result;
+   store.save(code,r);Map<String,Object> result=view(r,j.seat());result.put("token",token);return result;
   }
  }
  @PostMapping("/rooms/{code}/bots")public Map<String,Object> fillBots(@PathVariable String code,@RequestBody Command c){
@@ -36,7 +38,7 @@ public class BelotServer {
    int seat=authenticate(r,c.token());
    if(seat!=0||r.started)throw new IllegalArgumentException("Only host can add bots before start");
    for(int i=0;i<4;i++)if(r.seats[i]==null){r.seats[i]="Bot "+(i+1);r.tokens[i]=null;}
-   return view(r,seat);
+   store.save(code,r);return view(r,seat);
   }
  }
  private void advanceBots(Room r){
