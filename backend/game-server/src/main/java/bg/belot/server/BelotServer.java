@@ -76,6 +76,14 @@ public class BelotServer {
    return view(r,seat);
   }
  }
+ @PostMapping("/rooms/{code}/belote")public Map<String,Object> belote(@PathVariable String code,@RequestBody Command c){
+  Room r=room(code);synchronized(r){
+   int seat=authenticate(r,c.token());
+   if(!r.started)throw new IllegalArgumentException("Not started");
+   r.game.claimBelote(seat);
+   return view(r,seat);
+  }
+ }
  @PostMapping("/rooms/{code}/command")public Map<String,Object> command(@PathVariable String code,@RequestBody Command c){
   Room r=room(code);synchronized(r){
    int seat=authenticate(r,c.token());
@@ -105,7 +113,7 @@ public class BelotServer {
   m.put("score",g.score.clone());m.put("pending",g.pending);m.put("version",g.version);
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());
-  m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("trick",List.copyOf(g.current));
+  m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("canClaimBelote",g.phase==MatchState.Phase.PLAYING&&!g.beloteClaims.contains(seat)&&BelotEngine.hasBelote(g.hands.get(seat),g.contract));m.put("trick",List.copyOf(g.current));
   m.put("tricksCompleted",g.tricks.size());m.put("history",List.copyOf(g.history));
   return m;
  }
