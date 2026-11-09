@@ -14,7 +14,7 @@ public class BelotServer {
  private final Map<String,Room> rooms=new ConcurrentHashMap<>();
  static class Room {final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;}
  public record Join(String player,int seat){}
- public record Command(String token,String action,String card){}
+ public record Command(String token,String action,String card){}\n public record DeclareCommand(String token,List<Integer> selected){}
  public static void main(String[] args){SpringApplication.run(BelotServer.class,args);}
  @GetMapping("/health")public Map<String,String> health(){return Map.of("status","UP");}
  @PostMapping("/rooms")public Map<String,String> create(){String id=UUID.randomUUID().toString().substring(0,6).toUpperCase();rooms.put(id,new Room());return Map.of("code",id);}
@@ -48,8 +48,7 @@ public class BelotServer {
     else r.game.bid(seat,"PASS");
    }else if(r.game.phase==MatchState.Phase.PLAYING){
     List<Card> choices=r.game.legalFor(seat);
-    if(choices.isEmpty())break;
-    r.game.play(seat,choices.get(0));
+    if(choices.isEmpty())break;\n    if(r.game.tricks.isEmpty()&&r.game.current.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());\n    r.game.play(seat,choices.get(0));
    }else break;
   }
  }
@@ -64,6 +63,15 @@ public class BelotServer {
  }
  @GetMapping("/rooms/{code}")public Map<String,Object> snapshot(@PathVariable String code,@RequestParam String token){
   Room r=room(code);synchronized(r){return view(r,authenticate(r,token));}
+ }
+ @PostMapping("/rooms/{code}/declare")public Map<String,Object> declare(@PathVariable String code,@RequestBody DeclareCommand c){
+  Room r=room(code);synchronized(r){
+   int seat=authenticate(r,c.token());
+   if(!r.started)throw new IllegalArgumentException("Not started");
+   r.game.declare(seat,c.selected());
+   advanceBots(r);
+   return view(r,seat);
+  }
  }
  @PostMapping("/rooms/{code}/command")public Map<String,Object> command(@PathVariable String code,@RequestBody Command c){
   Room r=room(code);synchronized(r){
@@ -94,7 +102,7 @@ public class BelotServer {
   m.put("score",g.score.clone());m.put("pending",g.pending);m.put("version",g.version);
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());
-  m.put("legal",g.legalFor(seat));m.put("trick",List.copyOf(g.current));
+  m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("trick",List.copyOf(g.current));
   m.put("tricksCompleted",g.tricks.size());m.put("history",List.copyOf(g.history));
   return m;
  }
