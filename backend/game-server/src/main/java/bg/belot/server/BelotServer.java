@@ -52,8 +52,8 @@ public class BelotServer {
     List<Card> choices=r.game.legalFor(seat);
     if(choices.isEmpty())break;
     if(r.game.tricks.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,BelotBot.declarations(r.game,seat));
-    if(BelotEngine.hasBelote(r.game.hands.get(seat),r.game.contract)&&!r.game.beloteClaims.contains(seat)&&!r.game.belotePending.containsKey(seat))r.game.claimBelote(seat);
-    r.game.play(seat,BelotBot.play(r.game,seat));
+    Card chosen=BelotBot.play(r.game,seat);
+    r.game.play(seat,chosen,r.game.canAnnounceBelote(seat,chosen));
    }else break;
    r.nextBotActionAt=System.currentTimeMillis()+1500;
    break;
@@ -93,10 +93,10 @@ public class BelotServer {
    int seat=authenticate(r,c.token());
    if(!r.started)throw new IllegalArgumentException("Not started");
    if("BID".equals(c.action()))r.game.bid(seat,c.card());
-   else if("PLAY".equals(c.action())){
+   else if("PLAY".equals(c.action())||"PLAY_BELOTE".equals(c.action())){
     String[] parts=c.card().split("_");
     if(parts.length!=2)throw new IllegalArgumentException("Invalid card");
-    r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])));
+    r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])),"PLAY_BELOTE".equals(c.action()));
    }else if("NEXT".equals(c.action())){if(seat!=0)throw new IllegalArgumentException("Host only");r.game.nextDeal();}
    else if("NEW_GAME".equals(c.action())){
     if(seat!=0)throw new IllegalArgumentException("Host only");
@@ -127,7 +127,7 @@ public class BelotServer {
   m.put("score",g.score.clone());m.put("pending",g.pending);m.put("version",g.version);
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());
-  m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("canClaimBelote",g.phase==MatchState.Phase.PLAYING&&g.turn==seat&&!g.beloteClaims.contains(seat)&&!g.belotePending.containsKey(seat)&&BelotEngine.hasBelote(g.hands.get(seat),g.contract));m.put("trick",List.copyOf(g.current));
+  m.put("beloteCards",g.legalFor(seat).stream().filter(card->g.canAnnounceBelote(seat,card)).toList());m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("canClaimBelote",g.phase==MatchState.Phase.PLAYING&&g.turn==seat&&!g.beloteClaims.contains(seat)&&!g.belotePending.containsKey(seat)&&BelotEngine.hasBelote(g.hands.get(seat),g.contract));m.put("trick",List.copyOf(g.current));
   m.put("playedTricks",List.copyOf(g.tricks));m.put("announcedDeclarations",g.declarations.stream().map(d->Map.of("seat",d.seat(),"kind",d.kind(),"points",d.points(),"cardCount",d.cards().size())).toList());m.put("beloteSeats",List.copyOf(g.belotePending.keySet()));
   m.put("tricksCompleted",g.tricks.size());m.put("history",List.copyOf(g.history));
   return m;

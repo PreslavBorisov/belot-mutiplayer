@@ -17,10 +17,9 @@ public final class BotMatchRegression {
    while(game.phase==MatchState.Phase.PLAYING&&actions++<150){
     int seat=game.turn;
     if(game.tricks.isEmpty()&&!game.declarationDecisions.contains(seat))game.declare(seat,BelotBot.declarations(game,seat));
-    if(hasBelote(game.hands.get(seat),game.contract)&&!game.beloteClaims.contains(seat)&&!game.belotePending.containsKey(seat))game.claimBelote(seat);
     Card card=BelotBot.play(game,seat);
     if(!game.legalFor(seat).contains(card))throw new AssertionError("Bot played illegal card");
-    game.play(seat,card);
+    game.play(seat,card,game.canAnnounceBelote(seat,card));
    }
    if(game.tricks.size()!=8)throw new AssertionError("Expected eight completed tricks");
    if(game.phase!=MatchState.Phase.DEAL_DONE&&game.phase!=MatchState.Phase.FINISHED)throw new AssertionError("Deal did not finish");

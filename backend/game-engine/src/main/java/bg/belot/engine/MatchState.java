@@ -35,7 +35,9 @@ public final class MatchState implements java.io.Serializable {
   declarationDecisions.add(seat);version++;
  }
  public synchronized List<Card> legalFor(int seat){return phase==Phase.PLAYING&&seat==turn?legal(hands.get(seat),current,contract,seat):List.of();}
- public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(belotePending.containsKey(seat)&& (card.rank()==Rank.KING||card.rank()==Rank.QUEEN) && belotePending.get(seat).contains(card.suit())){long played=tricks.stream().flatMap(List::stream).filter(p->p.seat()==seat&&p.card().suit()==card.suit()&&(p.card().rank()==Rank.KING||p.card().rank()==Rank.QUEEN)).count()+current.stream().filter(p->p.seat()==seat&&p.card().suit()==card.suit()&&(p.card().rank()==Rank.KING||p.card().rank()==Rank.QUEEN)).count();boolean bothPlayed=played==2;if(bothPlayed)beloteClaims.add(seat);}if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
+ public synchronized void play(int seat,Card card){play(seat,card,false);}
+ public synchronized boolean canAnnounceBelote(int seat,Card card){return phase==Phase.PLAYING&&seat==turn&&legalFor(seat).contains(card)&&(card.rank()==Rank.KING||card.rank()==Rank.QUEEN)&&trump(card,contract)&&!belotePending.containsKey(seat)&&!beloteClaims.contains(seat)&&hands.get(seat).contains(new Card(card.suit(),card.rank()==Rank.KING?Rank.QUEEN:Rank.KING));}
+ public synchronized void play(int seat,Card card,boolean announceBelote){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");if(announceBelote){if(!canAnnounceBelote(seat,card))throw new IllegalArgumentException("Belote must accompany a legal trump king or queen");belotePending.put(seat,new HashSet<>(Set.of(card.suit())));}hands.get(seat).remove(card);current.add(new Play(seat,card));if(belotePending.containsKey(seat)&& (card.rank()==Rank.KING||card.rank()==Rank.QUEEN) && belotePending.get(seat).contains(card.suit())){long played=tricks.stream().flatMap(List::stream).filter(p->p.seat()==seat&&p.card().suit()==card.suit()&&(p.card().rank()==Rank.KING||p.card().rank()==Rank.QUEEN)).count()+current.stream().filter(p->p.seat()==seat&&p.card().suit()==card.suit()&&(p.card().rank()==Rank.KING||p.card().rank()==Rank.QUEEN)).count();boolean bothPlayed=played==2;if(bothPlayed)beloteClaims.add(seat);}if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
  private int[] resolveDeclarationPoints(){
   int[] result={0,0};
   // Four-of-a-kind and sequences compete in separate categories.
@@ -53,14 +55,7 @@ public final class MatchState implements java.io.Serializable {
   for(int seat:beloteClaims)result[team(seat)]+=20;
   return result;
  }
- public synchronized void claimBelote(int seat){
-  if(phase!=Phase.PLAYING||seat!=turn)throw new IllegalArgumentException("Belote only on your turn");
-  if(beloteClaims.contains(seat)||belotePending.containsKey(seat))throw new IllegalArgumentException("Already announced");
-  if(!hasBelote(hands.get(seat),contract))throw new IllegalArgumentException("No belote");
-  Set<Suit> eligible=new HashSet<>();
-  for(Suit suit:Suit.values())if((contract==Contract.ALL_TRUMP||contract.ordinal()==suit.ordinal())&&hands.get(seat).contains(new Card(suit,Rank.KING))&&hands.get(seat).contains(new Card(suit,Rank.QUEEN)))eligible.add(suit);
-  belotePending.put(seat,eligible);version++;
- }
+ public synchronized void claimBelote(int seat){throw new IllegalArgumentException("Announce belote when playing the trump king or queen");}
  private List<Card> originalHandFor(int seat){
   List<Card> cards=new ArrayList<>(hands.get(seat));
   for(List<Play> trick:tricks)for(Play p:trick)if(p.seat()==seat)cards.add(p.card());
