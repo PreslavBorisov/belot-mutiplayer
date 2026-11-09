@@ -1,0 +1,38 @@
+name: Import Belot project ZIP
+on:
+  push:
+    paths:
+      - 'belot-multiplayer-prototype.zip'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract project into repository root
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib
+          archive = pathlib.Path('belot-multiplayer-prototype.zip')
+          with zipfile.ZipFile(archive) as z:
+              for member in z.infolist():
+                  p = pathlib.PurePosixPath(member.filename)
+                  if not p.parts or p.parts[0] != 'belot-multiplayer':
+                      continue
+                  rel = pathlib.PurePosixPath(*p.parts[1:])
+                  if not rel.parts or '..' in rel.parts or member.is_dir():
+                      continue
+                  dst = pathlib.Path(*rel.parts)
+                  dst.parent.mkdir(parents=True, exist_ok=True)
+                  dst.write_bytes(z.read(member))
+          PY
+          rm belot-multiplayer-prototype.zip
+      - name: Commit extracted files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Import Belot Multiplayer source from ZIP' || exit 0
+          git push
