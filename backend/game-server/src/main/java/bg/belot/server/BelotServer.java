@@ -65,7 +65,7 @@ public class BelotServer {
    if(Arrays.stream(r.seats).anyMatch(Objects::isNull))throw new IllegalArgumentException("Four seats required");
    if(seat!=0)throw new IllegalArgumentException("Host only");
    if(r.started)throw new IllegalArgumentException("Already started");
-   r.started=true;advanceBots(r);store.save(code,r);return view(r,seat);
+   r.started=true;r.game.dealStartedAt=System.currentTimeMillis();advanceBots(r);store.save(code,r);return view(r,seat);
   }
  }
  @GetMapping("/rooms/{code}")public Map<String,Object> snapshot(@PathVariable String code,@RequestParam String token){
@@ -121,13 +121,14 @@ public class BelotServer {
  private Map<String,Object> view(Room r,int seat){
   MatchState g=r.game;Map<String,Object> m=new LinkedHashMap<>();
   m.put("seats",r.seats.clone());m.put("seat",seat);m.put("started",r.started);
+  m.put("bidNotices",g.bidNotices==null?List.of():List.copyOf(g.bidNotices));m.put("dealStartedAt",g.dealStartedAt);m.put("serverNow",System.currentTimeMillis());
   m.put("phase",g.phase);m.put("turn",g.turn);m.put("dealer",g.dealer);
   m.put("contract",g.contract);m.put("highest",g.highest);m.put("contra",g.contra);
   m.put("score",g.score.clone());m.put("pending",g.pending);m.put("version",g.version);
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());
   m.put("legal",g.legalFor(seat));m.put("declarations",g.availableDeclarations(seat));m.put("declarationDecided",g.declarationDecisions.contains(seat));m.put("canClaimBelote",g.phase==MatchState.Phase.PLAYING&&g.turn==seat&&!g.beloteClaims.contains(seat)&&!g.belotePending.containsKey(seat)&&BelotEngine.hasBelote(g.hands.get(seat),g.contract));m.put("trick",List.copyOf(g.current));
-  m.put("playedTricks",List.copyOf(g.tricks));m.put("announcedDeclarations",List.copyOf(g.declarations));m.put("beloteSeats",List.copyOf(g.belotePending.keySet()));
+  m.put("playedTricks",List.copyOf(g.tricks));m.put("announcedDeclarations",g.declarations.stream().map(d->Map.of("seat",d.seat(),"kind",d.kind(),"points",d.points(),"cardCount",d.cards().size())).toList());m.put("beloteSeats",List.copyOf(g.belotePending.keySet()));
   m.put("tricksCompleted",g.tricks.size());m.put("history",List.copyOf(g.history));
   return m;
  }
