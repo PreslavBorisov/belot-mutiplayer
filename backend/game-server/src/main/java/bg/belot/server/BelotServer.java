@@ -63,7 +63,7 @@ public class BelotServer {
    if(Arrays.stream(r.seats).anyMatch(Objects::isNull))throw new IllegalArgumentException("Four seats required");
    if(seat!=0)throw new IllegalArgumentException("Host only");
    if(r.started)throw new IllegalArgumentException("Already started");
-   r.started=true;advanceBots(r);return view(r,seat);
+   r.started=true;advanceBots(r);store.save(code,r);return view(r,seat);
   }
  }
  @GetMapping("/rooms/{code}")public Map<String,Object> snapshot(@PathVariable String code,@RequestParam String token){
@@ -75,7 +75,7 @@ public class BelotServer {
    if(!r.started)throw new IllegalArgumentException("Not started");
    r.game.declare(seat,c.selected());
    advanceBots(r);
-   return view(r,seat);
+   store.save(code,r);return view(r,seat);
   }
  }
  @PostMapping("/rooms/{code}/belote")public Map<String,Object> belote(@PathVariable String code,@RequestBody Command c){
@@ -83,7 +83,7 @@ public class BelotServer {
    int seat=authenticate(r,c.token());
    if(!r.started)throw new IllegalArgumentException("Not started");
    r.game.claimBelote(seat);
-   return view(r,seat);
+   store.save(code,r);return view(r,seat);
   }
  }
  @PostMapping("/rooms/{code}/command")public Map<String,Object> command(@PathVariable String code,@RequestBody Command c){
@@ -97,7 +97,7 @@ public class BelotServer {
     r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])));
    }else if("NEXT".equals(c.action())){if(seat!=0)throw new IllegalArgumentException("Host only");r.game.nextDeal();}
    else throw new IllegalArgumentException("Unknown action");
-   advanceBots(r);return view(r,seat);
+   advanceBots(r);store.save(code,r);return view(r,seat);
   }
  }
  private int authenticate(Room r,String token){
