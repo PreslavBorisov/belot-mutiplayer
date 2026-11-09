@@ -50,7 +50,7 @@ public class BelotServer {
    }else if(r.game.phase==MatchState.Phase.PLAYING){
     List<Card> choices=r.game.legalFor(seat);
     if(choices.isEmpty())break;
-    if(r.game.tricks.isEmpty()&&r.game.current.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());
+    if(r.game.tricks.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());
     r.game.play(seat,choices.get(0));
    }else break;
   }
