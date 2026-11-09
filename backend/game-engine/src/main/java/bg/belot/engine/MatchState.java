@@ -11,11 +11,11 @@ public final class MatchState {
  public synchronized void bid(int seat,String action){require(Phase.BIDDING,seat);if(action.equals("PASS")){passCount++;if(highest==null&&passCount==4){dealer=(dealer+1)%4;newDeal();return;}if(highest!=null&&passCount==3){finalizeBid();return;}}else if(action.equals("CONTRA")){if(highest==null||contractTeam==team(seat)||contra!=1)throw new IllegalArgumentException("Contra not allowed");contra=2;passCount=0;}else if(action.equals("RECONTRA")){if(highest==null||contractTeam!=team(seat)||contra!=2)throw new IllegalArgumentException("Recontra not allowed");contra=4;passCount=0;}else{Contract c=Contract.valueOf(action);if(highest!=null&&priority(c)<=priority(highest))throw new IllegalArgumentException("Bid must be higher");if(contra!=1)throw new IllegalArgumentException("Contract locked by contra");highest=c;contractTeam=team(seat);passCount=0;}turn=(turn+1)%4;version++;}
  private void finalizeBid(){contract=highest;int k=0;for(int offset=1;offset<=4;offset++){int seat=(dealer+offset)%4;for(int j=0;j<3;j++)hands.get(seat).add(stock.get(k++));}stock=List.of();phase=Phase.PLAYING;turn=(dealer+1)%4;version++;}
  public synchronized List<Declaration> availableDeclarations(int seat){
-  if(seat<0||seat>=4||phase!=Phase.PLAYING||!tricks.isEmpty()||!current.isEmpty())return List.of();
+  if(seat<0||seat>=4||phase!=Phase.PLAYING||!tricks.isEmpty())return List.of();
   return detect(hands.get(seat),seat,contract);
  }
  public synchronized void declare(int seat,List<Integer> selected){
-  if(phase!=Phase.PLAYING||!tricks.isEmpty()||!current.isEmpty())throw new IllegalArgumentException("Declarations only before first card");
+  if(phase!=Phase.PLAYING||!tricks.isEmpty())throw new IllegalArgumentException("Declarations only during first trick");
   if(seat<0||seat>=4||declarationDecisions.contains(seat))throw new IllegalArgumentException("Already declared");
   List<Declaration> options=availableDeclarations(seat);
   if(selected==null)throw new IllegalArgumentException("Missing selection");
@@ -28,7 +28,7 @@ public final class MatchState {
   declarationDecisions.add(seat);version++;
  }
  public synchronized List<Card> legalFor(int seat){return phase==Phase.PLAYING&&seat==turn?legal(hands.get(seat),current,contract,seat):List.of();}
- public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&current.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
+ public synchronized void play(int seat,Card card){require(Phase.PLAYING,seat);if(!legalFor(seat).contains(card))throw new IllegalArgumentException("Illegal card");if(tricks.isEmpty()&&!declarationDecisions.contains(seat))throw new IllegalArgumentException("Choose declarations before playing your first card");hands.get(seat).remove(card);current.add(new Play(seat,card));if(current.size()==4){List<Play>complete=List.copyOf(current);tricks.add(complete);turn=complete.get(winningIndex(complete,contract)).seat();current.clear();if(tricks.size()==8){finishDeal();return;}}else turn=(turn+1)%4;version++;}
  private int[] resolveDeclarationPoints(){
   int[] result={0,0};
   if(declarations.isEmpty())return result;
