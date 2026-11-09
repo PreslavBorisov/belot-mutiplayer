@@ -14,7 +14,7 @@ public final class BelotBot {
    int value=hand.stream().mapToInt(card->points(card,c)+(trump(card,c)?power(card,c)*2:0)).sum();
    if(value>max){max=value;best=c;}
   }
-  return max>=55?best.name():"PASS";
+  return max>=30?best.name():"PASS";
  }
  public static List<Integer> declarations(MatchState g,int seat){
   List<Declaration> choices=g.availableDeclarations(seat);
