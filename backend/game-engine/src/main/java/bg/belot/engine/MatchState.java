@@ -69,7 +69,8 @@ public final class MatchState {
   // A failed contract awards the entire deal to the defenders.
   // Equal trick points are held as pending; defenders receive their own points.
   if(raw[contractTeam]==raw[defenders]){
-   pending+=(total*contra+5)/10;
+   added[defenders]=(raw[defenders]*contra)/10;
+   pending+=(raw[contractTeam]*contra+9)/10;
   }else if(!contractMade){
    added[defenders]=(total*contra+5)/10;
   }else if(contra>1){
