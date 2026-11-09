@@ -14,7 +14,7 @@ public class BelotServer {
  private final Map<String,Room> rooms=new ConcurrentHashMap<>();
  private final RoomStore store;
  public BelotServer(RoomStore store){this.store=store;for(var entry:store.load().entrySet())rooms.put(entry.getKey(),(Room)entry.getValue());}
- static class Room implements java.io.Serializable {private static final long serialVersionUID=1L;final MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;transient long nextBotActionAt=0;}
+ static class Room implements java.io.Serializable {private static final long serialVersionUID=1L;MatchState game=new MatchState();final String[] seats=new String[4];final String[] tokens=new String[4];boolean started=false;transient long nextBotActionAt=0;}
  public record Join(String player,int seat){}
  public record Command(String token,String action,String card){}
  public record DeclareCommand(String token,List<Integer> selected){}
@@ -98,6 +98,15 @@ public class BelotServer {
     if(parts.length!=2)throw new IllegalArgumentException("Invalid card");
     r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])));
    }else if("NEXT".equals(c.action())){if(seat!=0)throw new IllegalArgumentException("Host only");r.game.nextDeal();}
+   else if("NEW_GAME".equals(c.action())){
+    if(seat!=0)throw new IllegalArgumentException("Host only");
+    long previousVersion=r.game.version;
+    int nextDealer=(r.game.dealer+1)%4;
+    r.game=new MatchState();
+    if(nextDealer!=r.game.dealer){r.game.dealer=nextDealer;r.game.dealNumber=0;r.game.newDeal();}
+    r.game.version=previousVersion+1;
+    r.nextBotActionAt=System.currentTimeMillis()+1500;
+   }
    else throw new IllegalArgumentException("Unknown action");
    advanceBots(r);store.save(code,r);return view(r,seat);
   }
