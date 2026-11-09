@@ -49,9 +49,9 @@ public final class MatchState {
   return result;
  }
  public synchronized void claimBelote(int seat){
-  if(phase!=Phase.PLAYING||seat<0||seat>3)throw new IllegalArgumentException("Not playing");
+  if(phase!=Phase.PLAYING||seat!=turn)throw new IllegalArgumentException("Belote can be announced only on your turn");
   if(beloteClaims.contains(seat))throw new IllegalArgumentException("Already announced belote");
-  if(!hasBelote(originalHandFor(seat),contract))throw new IllegalArgumentException("No belote");
+  if(!hasBelote(hands.get(seat),contract))throw new IllegalArgumentException("No belote or first card already played");
   beloteClaims.add(seat);version++;
  }
  private List<Card> originalHandFor(int seat){
