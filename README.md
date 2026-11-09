@@ -1,15 +1,23 @@
-# Belot Multiplayer
+# Belot Multiplayer — incomplete prototype, not production-ready
 
-Bulgarian Belot multiplayer prototype. This repository is **not yet a playable or production-ready game**.
+This repository contains a Java 21 dependency-free engine with an executable smoke test, a Spring Boot HTTP room server prototype and a React/Vite UI prototype. **This is NOT a complete playable Belot.BG game.** In particular authentication, persistence, declarations, WebSockets, and correct official scoring are missing. Do not expose the server to the public internet.
 
-## Source package
-The prototype source archive was provided in the ChatGPT conversation as `belot-multiplayer-prototype.zip`. Extract its contents and upload the project files into this repository before attempting deployment.
+## Engine smoke test (no dependencies)
+```bash
+mkdir -p backend/game-engine/target/classes
+javac -d backend/game-engine/target/classes $(find backend/game-engine/src/main/java -name '*.java')
+javac -cp backend/game-engine/target/classes -d backend/game-engine/target/classes backend/game-engine/src/test/java/bg/belot/engine/EngineSmoke.java
+java -cp backend/game-engine/target/classes bg.belot.engine.EngineSmoke
+```
+
+## Local prototype (requires Maven and npm registry access)
+```bash
+cd backend && mvn clean package
+java -jar game-server/target/game-server-0.1.0.jar
+# in another terminal
+cd frontend && npm install && npm run dev
+```
+Open http://localhost:5173. Four browser sessions may join the same room by code; **no secure identity checks** and polling is used instead of WebSockets. This has not been integration-tested.
 
 ## Deployment
-Render can host the Java backend using Docker, but a deployment requires a completed multiplayer server, a production build, environment variables, and a PostgreSQL database. No public gameplay URL is verified yet.
-
-## Rules
-Authoritative rules: https://belot.bg/belot/rules/
-
-## Status
-Java engine smoke tests were reported passing; complete official scoring, registration, persistence, WebSocket multiplayer and end-to-end four-player verification are incomplete.
+No public deployment was performed. Do not deploy this prototype until security, rules and persistence gaps in RULES.md are closed.
