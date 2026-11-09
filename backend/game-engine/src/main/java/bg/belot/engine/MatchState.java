@@ -89,7 +89,7 @@ public final class MatchState {
   boolean capot=tricks.stream().allMatch(t->team(t.get(winningIndex(t,contract)).seat())==team(tricks.get(0).get(winningIndex(tricks.get(0),contract)).seat()));
   history.add("Deal "+dealNumber+" "+contract+" raw="+Arrays.toString(raw)+" score="+Arrays.toString(score)+" pending="+pending+" made="+contractMade);
   if(capot)capotLock=1;else if(capotLock>0)capotLock=0;
-  if(capotLock==0&&Math.max(score[0],score[1])>=151&&score[0]!=score[1])phase=Phase.FINISHED;
+  if(!capot&&capotLock==0&&Math.max(score[0],score[1])>=151&&score[0]!=score[1])phase=Phase.FINISHED;
   else phase=Phase.DEAL_DONE;
   version++;
  }
