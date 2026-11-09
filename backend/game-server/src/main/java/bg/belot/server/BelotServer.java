@@ -30,13 +30,36 @@ public class BelotServer {
    Map<String,Object> result=view(r,j.seat());result.put("token",token);return result;
   }
  }
+ @PostMapping("/rooms/{code}/bots")public Map<String,Object> fillBots(@PathVariable String code,@RequestBody Command c){
+  Room r=room(code);synchronized(r){
+   int seat=authenticate(r,c.token());
+   if(seat!=0||r.started)throw new IllegalArgumentException("Only host can add bots before start");
+   for(int i=0;i<4;i++)if(r.seats[i]==null){r.seats[i]="Bot "+(i+1);r.tokens[i]=null;}
+   return view(r,seat);
+  }
+ }
+ private void advanceBots(Room r){
+  int guard=0;
+  while(r.started&&guard++<150){
+   int seat=r.game.turn;
+   if(seat<0||seat>=4||r.tokens[seat]!=null)break;
+   if(r.game.phase==MatchState.Phase.BIDDING){
+    if(r.game.highest==null)r.game.bid(seat,"CLUBS");
+    else r.game.bid(seat,"PASS");
+   }else if(r.game.phase==MatchState.Phase.PLAYING){
+    List<Card> choices=r.game.legalFor(seat);
+    if(choices.isEmpty())break;
+    r.game.play(seat,choices.get(0));
+   }else break;
+  }
+ }
  @PostMapping("/rooms/{code}/start")public Map<String,Object> start(@PathVariable String code,@RequestBody Command c){
   Room r=room(code);synchronized(r){
    int seat=authenticate(r,c.token());
    if(Arrays.stream(r.seats).anyMatch(Objects::isNull))throw new IllegalArgumentException("Four seats required");
    if(seat!=0)throw new IllegalArgumentException("Host only");
    if(r.started)throw new IllegalArgumentException("Already started");
-   r.started=true;return view(r,seat);
+   r.started=true;advanceBots(r);return view(r,seat);
   }
  }
  @GetMapping("/rooms/{code}")public Map<String,Object> snapshot(@PathVariable String code,@RequestParam String token){
@@ -53,7 +76,7 @@ public class BelotServer {
     r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])));
    }else if("NEXT".equals(c.action()))r.game.nextDeal();
    else throw new IllegalArgumentException("Unknown action");
-   return view(r,seat);
+   advanceBots(r);return view(r,seat);
   }
  }
  private int authenticate(Room r,String token){
