@@ -45,13 +45,13 @@ public class BelotServer {
    int seat=r.game.turn;
    if(seat<0||seat>=4||r.tokens[seat]!=null)break;
    if(r.game.phase==MatchState.Phase.BIDDING){
-    if(r.game.highest==null)r.game.bid(seat,"CLUBS");
-    else r.game.bid(seat,"PASS");
+    r.game.bid(seat,BelotBot.bid(r.game,seat));
    }else if(r.game.phase==MatchState.Phase.PLAYING){
     List<Card> choices=r.game.legalFor(seat);
     if(choices.isEmpty())break;
-    if(r.game.tricks.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,List.of());
-    r.game.play(seat,choices.get(0));
+    if(r.game.tricks.isEmpty()&&!r.game.declarationDecisions.contains(seat))r.game.declare(seat,BelotBot.declarations(r.game,seat));
+    if(BelotEngine.hasBelote(r.game.hands.get(seat),r.game.contract)&&!r.game.beloteClaims.contains(seat))r.game.claimBelote(seat);
+    r.game.play(seat,BelotBot.play(r.game,seat));
    }else break;
   }
  }
