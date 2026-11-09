@@ -2,7 +2,8 @@ package bg.belot.engine;
 import java.util.*;
 import static bg.belot.engine.BelotEngine.*;
 /** Single-room state machine. All mutating methods synchronized; caller persists snapshots. */
-public final class MatchState {
+public final class MatchState implements java.io.Serializable {
+ private static final long serialVersionUID=1L;
  public enum Phase { BIDDING, PLAYING, DEAL_DONE, FINISHED }
  public final List<List<Card>> hands=new ArrayList<>();public final List<List<Play>> tricks=new ArrayList<>();public final List<Play> current=new ArrayList<>();public final int[] score={0,0};
  public int dealer=0,turn=1,contractTeam=-1,passCount=0,contra=1,pending=0,dealNumber=0,capotLock=0;public int contraTeam=-1;public long version=0;public Phase phase;public Contract contract;public Contract highest;public final List<String> history=new ArrayList<>();public final List<Declaration> declarations=new ArrayList<>();public final Set<Integer> declarationDecisions=new HashSet<>();public final Set<Integer> beloteClaims=new HashSet<>();public final Map<Integer,Set<Suit>> belotePending=new HashMap<>();private List<Card> stock;private final List<List<Declaration>> declarationOptions=new ArrayList<>();
@@ -64,30 +65,12 @@ public final class MatchState {
  }
  private void finishDeal(){
   int[] raw=trickPoints(tricks,contract);int[] declarationPoints=resolveDeclarationPoints();raw[0]+=declarationPoints[0];raw[1]+=declarationPoints[1];
-  int defenders=1-contractTeam;
-  int total=raw[0]+raw[1];
-  boolean contractMade=raw[contractTeam]>raw[defenders];
-  int[] added=new int[2];
-  // A failed contract awards the entire deal to the defenders.
-  // Equal trick points are held as pending; defenders receive their own points.
-  if(raw[contractTeam]==raw[defenders]){
-   added[defenders]=(raw[defenders]*contra)/10;
-   pending+=(raw[contractTeam]*contra+9)/10;
-  }else if(!contractMade){
-   added[defenders]=(total*contra+5)/10;
-  }else if(contra>1){
-   added[contractTeam]=(total*contra+5)/10;
-  }else{
-   added[0]=(raw[0]+5)/10;
-   added[1]=(raw[1]+5)/10;
-  }
-  if(raw[contractTeam]!=raw[defenders]){
-   added[contractMade?contractTeam:defenders]+=pending;
-   pending=0;
-  }
+  BelotScoring.Settlement settlement=BelotScoring.settle(raw,contractTeam,contra,pending,contract);
+  int[] added=settlement.awarded();
+  pending=settlement.hanging();
   score[0]+=added[0];score[1]+=added[1];
   boolean capot=tricks.stream().allMatch(t->team(t.get(winningIndex(t,contract)).seat())==team(tricks.get(0).get(winningIndex(tricks.get(0),contract)).seat()));
-  history.add("Deal "+dealNumber+" "+contract+" raw="+Arrays.toString(raw)+" score="+Arrays.toString(score)+" pending="+pending+" made="+contractMade);
+  history.add("Deal "+dealNumber+" "+contract+" raw="+Arrays.toString(raw)+" score="+Arrays.toString(score)+" pending="+pending+" made="+(settlement.winningTeam()==contractTeam));
   if(capot)capotLock=1;else if(capotLock>0)capotLock=0;
   if(!capot&&capotLock==0&&Math.max(score[0],score[1])>=151&&score[0]!=score[1])phase=Phase.FINISHED;
   else phase=Phase.DEAL_DONE;
