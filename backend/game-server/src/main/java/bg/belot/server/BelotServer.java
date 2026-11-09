@@ -93,7 +93,7 @@ public class BelotServer {
     String[] parts=c.card().split("_");
     if(parts.length!=2)throw new IllegalArgumentException("Invalid card");
     r.game.play(seat,new Card(Suit.valueOf(parts[0]),Rank.valueOf(parts[1])));
-   }else if("NEXT".equals(c.action()))r.game.nextDeal();
+   }else if("NEXT".equals(c.action())){if(seat!=0)throw new IllegalArgumentException("Host only");r.game.nextDeal();}
    else throw new IllegalArgumentException("Unknown action");
    advanceBots(r);return view(r,seat);
   }
