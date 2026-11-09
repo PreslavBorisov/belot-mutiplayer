@@ -27,6 +27,7 @@ jobs:
         run: |
           java -ea -cp /tmp/belot-classes bg.belot.engine.EngineSmoke
           java -ea -cp /tmp/belot-classes bg.belot.engine.RulesRegression
+          java -ea -cp /tmp/belot-classes bg.belot.engine.BotMatchRegression
   backend:
     runs-on: ubuntu-latest
     steps:
