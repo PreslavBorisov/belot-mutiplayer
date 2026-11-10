@@ -123,7 +123,7 @@ public class BelotServer {
   m.put("seats",r.seats.clone());m.put("seat",seat);m.put("started",r.started);
   m.put("bidNotices",g.bidNotices==null?List.of():List.copyOf(g.bidNotices));m.put("dealStartedAt",g.dealStartedAt);m.put("serverNow",System.currentTimeMillis());
   m.put("phase",g.phase);m.put("turn",g.turn);m.put("dealer",g.dealer);
-  m.put("contract",g.contract);m.put("highest",g.highest);m.put("contra",g.contra);
+  m.put("contractBidder",g.highestBidder);m.put("contract",g.contract);m.put("highest",g.highest);m.put("contra",g.contra);
   m.put("score",g.score.clone());m.put("pending",g.pending);m.put("version",g.version);
   m.put("hand",r.started?List.copyOf(g.hands.get(seat)):List.of());
   m.put("handCounts",g.hands.stream().map(List::size).toList());

@@ -29,6 +29,8 @@ jobs:
           java -ea -cp /tmp/belot-classes bg.belot.engine.RulesRegression
           java -ea -cp /tmp/belot-classes bg.belot.engine.BotMatchRegression
           java -ea -cp /tmp/belot-classes bg.belot.engine.DeclarationRegression
+          java -ea -cp /tmp/belot-classes bg.belot.engine.BeloteTimingRegression
+          java -ea -cp /tmp/belot-classes bg.belot.engine.AnnouncementRegression
           java -ea -cp /tmp/belot-classes bg.belot.engine.ScoringRegression
   backend:
     runs-on: ubuntu-latest
