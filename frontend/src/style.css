@@ -4,3 +4,15 @@
 @media(prefers-reduced-motion:reduce){button{transition:none}}
 
 @media(max-width:420px){.player-left,.player-right{width:78px}.table-trick{grid-template-columns:repeat(3,50px);width:150px}.table-trick .card{width:46px}.played-card{min-width:46px}.player-left strong,.player-right strong{font-size:12px}.player-left small,.player-right small{font-size:10px}}
+
+/* Turn actions remain accessible above the table, without page scrolling. */
+.action-dialog{border:1px solid #bdcbd5;border-radius:22px;background:#f6f8fa;color:#293a48;padding:22px;width:min(540px,calc(100vw - 24px));max-height:85dvh;overflow:auto;box-shadow:0 20px 80px #20384950}
+.action-dialog::backdrop{background:#22354388;backdrop-filter:blur(3px)}
+.dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.dialog-heading h2{font-size:22px;margin:0}.dialog-heading button{flex-shrink:0;padding:9px 13px;margin:0}
+.bid-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bid-options button{margin:0;padding:15px 8px;font-size:17px;min-height:52px}
+.dialog-hand{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin:4px 0 20px}.dialog-hand .card{width:52px;height:74px;font-size:24px}
+.declaration-options{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}.declaration-options label{display:flex;flex-wrap:wrap;background:#e7edf2;padding:12px;border-radius:12px;font-size:17px}
+.open-action{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:10;box-shadow:0 5px 22px #26384444;width:max-content;max-width:calc(100vw - 24px)}
+.player .bid-notice{font-size:17px;line-height:1.25}.player strong{font-size:18px}.player small:not(.bid-notice){font-size:13px}
+@media(max-width:650px){.player .bid-notice{font-size:15px}.player strong{font-size:15px}.player small:not(.bid-notice){font-size:11px}.action-dialog{padding:16px}.dialog-heading h2{font-size:20px}}
+@media(max-width:420px){.player-left .bid-notice,.player-right .bid-notice{font-size:14px;overflow-wrap:anywhere}.player-left strong,.player-right strong{font-size:14px}}
