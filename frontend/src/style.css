@@ -16,3 +16,6 @@
 .player .bid-notice{font-size:17px;line-height:1.25}.player strong{font-size:18px}.player small:not(.bid-notice){font-size:13px}
 @media(max-width:650px){.player .bid-notice{font-size:15px}.player strong{font-size:15px}.player small:not(.bid-notice){font-size:11px}.action-dialog{padding:16px}.dialog-heading h2{font-size:20px}}
 @media(max-width:420px){.player-left .bid-notice,.player-right .bid-notice{font-size:14px;overflow-wrap:anywhere}.player-left strong,.player-right strong{font-size:14px}}
+
+.current-bid{display:flex;flex-direction:column;gap:5px;padding:14px 16px;margin:0 0 18px;background:#e5ecf2;border:1px solid #c4d2dd;border-radius:13px;text-align:center}.current-bid>span{font-size:13px;color:#526b7d}.current-bid strong{font-size:21px;color:#304e66}.current-bid small{font-size:14px}
+.bid-options .pass-button{grid-column:1 / -1;background:#8a4e59;color:#fff;min-height:62px;font-size:21px;letter-spacing:1px;margin-top:6px}.bid-options .pass-button:hover:enabled{background:#713d48}
